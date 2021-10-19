@@ -1,0 +1,17 @@
+python main.py --dataset_name CUB \
+               --architecture vgg16 \
+               --wsol_method gradcampp \
+               --experiment_name 11.test \
+               --pretrained TRUE \
+               --num_val_sample_per_class 5 \
+               --large_feature_map FALSE \
+               --batch_size 32 \
+               --epochs 100 \
+               --lr 0.00001268269 \
+               --lr_decay_frequency 15 \
+               --weight_decay 5.00E-04 \
+               --override_cache FALSE \
+               --workers 4 \
+               --box_v2_metric True \
+               --iou_threshold_list 30 50 70 \
+               --eval_checkpoint_type last

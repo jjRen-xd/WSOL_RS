@@ -10,8 +10,11 @@
 #                   -- 划分数据集(PatternNet, TODO), 生成WSOL_EVAL框架所需的
 #                   数据格式, 即：图像路径 标签 bbox, 若同一图像出现多个目标，
 #                   生成多行bbox说明
+#                                   --> PatternNetV2 <--
+#                   -- 样本总数：11*800-16=8784(有的立交桥图像没有目标)
+#                   -- 训练集：5271(60%) 测试集：1755(20%) 验证集：1757(20%)
 #                   — — — — — — — — — — — — — — — — — — — — — — — — — — — 
-# Module called:    WSOL_EVAL/utils.logger
+# Module called:    <0> None
 # Function List:    <0> None
 # Class List:       <0> None
 #                   
@@ -46,8 +49,14 @@ test_image_ids_txt = open(f'../dataset/{DATASET_NAME}/test/image_ids.txt', 'w')
 test_class_labels_txt = open(f'../dataset/{DATASET_NAME}/test/class_labels.txt', 'w')
 test_image_sizes_txt = open(f'../dataset/{DATASET_NAME}/test/image_sizes.txt', 'w')
 test_localization_txt = open(f'../dataset/{DATASET_NAME}/test/localization.txt', 'w')
+# validation set path
+val_image_ids_txt = open(f'../dataset/{DATASET_NAME}/val/image_ids.txt', 'w')
+val_class_labels_txt = open(f'../dataset/{DATASET_NAME}/val/class_labels.txt', 'w')
+val_image_sizes_txt = open(f'../dataset/{DATASET_NAME}/val/image_sizes.txt', 'w')
+val_localization_txt = open(f'../dataset/{DATASET_NAME}/val/localization.txt', 'w')
 
-train_ratio = 0.8   # train/test
+train_ratio = 0.8   # train/all
+val_ratio = 0.25     # val/train
 
 image_root = data_root+"Images/"
 label_root = data_root+"Labels/"
@@ -58,8 +67,11 @@ for dir in tqdm(os.listdir(image_root)):
         label_list.append(dir)
         label2name_txt.write('{} {}\n'.format(dir, str(len(label_list)-1)))
         data_path = os.path.join(image_root, dir)
+
         train_list = random.sample(os.listdir(data_path), 
                                    int(len(os.listdir(data_path))*train_ratio))
+        val_list = random.sample(train_list, int(len(train_list)*val_ratio))
+
         for im in os.listdir(data_path):
             xml_file = label_root+dir+'/'+im[:-3]+"xml"
             try:
@@ -72,12 +84,20 @@ for dir in tqdm(os.listdir(image_root)):
             im_size = root.findall("size")[0]
 
             if im in train_list:
-                train_image_ids_txt.write(f"{dir}/{im}\n")
-                train_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
-                train_class_labels_txt.write(f"{dir}/{im},{str(len(label_list)-1)}\n")
-                for obj in objects:
-                    pos = f"{obj[4][0].text},{obj[4][1].text},{obj[4][2].text},{obj[4][3].text}"
-                    train_localization_txt.write(f"{dir}/{im},{pos}\n")
+                if im in val_list:
+                    val_image_ids_txt.write(f"{dir}/{im}\n")
+                    val_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
+                    val_class_labels_txt.write(f"{dir}/{im},{str(len(label_list)-1)}\n")
+                    for obj in objects:
+                        pos = f"{obj[4][0].text},{obj[4][1].text},{obj[4][2].text},{obj[4][3].text}"
+                        val_localization_txt.write(f"{dir}/{im},{pos}\n")
+                else:
+                    train_image_ids_txt.write(f"{dir}/{im}\n")
+                    train_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
+                    train_class_labels_txt.write(f"{dir}/{im},{str(len(label_list)-1)}\n")
+                    for obj in objects:
+                        pos = f"{obj[4][0].text},{obj[4][1].text},{obj[4][2].text},{obj[4][3].text}"
+                        train_localization_txt.write(f"{dir}/{im},{pos}\n")
             else:
                 test_image_ids_txt.write(f"{dir}/{im}\n")
                 test_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")

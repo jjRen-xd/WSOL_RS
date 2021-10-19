@@ -7,6 +7,5 @@ football_field 5
 intersection 6
 sparse_residential 7
 airplane 8
-ferry_terminal 9
-overpass 10
-storage_tank 11
+overpass 9
+storage_tank 10

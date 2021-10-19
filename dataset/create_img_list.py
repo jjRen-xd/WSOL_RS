@@ -29,35 +29,71 @@ sys.path.append('/media/hp3090/HDD-2T/renjunjie/WSOL_RS/')
 
 import random
 from tqdm import tqdm
+import xml.etree.ElementTree as ET
 
-random.seed(8)
+DATASET_NAME = "PatternNetV2"
+data_root = f"/media/hp3090/HDD-2T/renjunjie/WSOL_RS/dataset/{DATASET_NAME}/"
 
-train_txt = open('../dataset/PatternNetV2/PatternNetV2_train.txt', 'w')
-val_txt = open('../dataset/PatternNetV2/PatternNetV2_test.txt', 'w')
-label_txt = open('../dataset/PatternNetV2/PatternNetV2.txt', 'w')
+# Dataset name list
+label2name_txt = open(f'../dataset/{DATASET_NAME}/label2name.txt', 'w')
+# Train set path
+train_image_ids_txt = open(f'../dataset/{DATASET_NAME}/train/image_ids.txt', 'w')
+train_class_labels_txt = open(f'../dataset/{DATASET_NAME}/train/class_labels.txt', 'w')
+train_image_sizes_txt = open(f'../dataset/{DATASET_NAME}/train/image_sizes.txt', 'w')
+train_localization_txt = open(f'../dataset/{DATASET_NAME}/train/localization.txt', 'w')
+# test set path
+test_image_ids_txt = open(f'../dataset/{DATASET_NAME}/test/image_ids.txt', 'w')
+test_class_labels_txt = open(f'../dataset/{DATASET_NAME}/test/class_labels.txt', 'w')
+test_image_sizes_txt = open(f'../dataset/{DATASET_NAME}/test/image_sizes.txt', 'w')
+test_localization_txt = open(f'../dataset/{DATASET_NAME}/test/localization.txt', 'w')
 
-train_ratio = 0.8
+train_ratio = 0.8   # train/test
 
-data_root = "/media/hp3090/HDD-2T/renjunjie/WSOL_RS/dataset/PatternNetV2/Images/"
+image_root = data_root+"Images/"
+label_root = data_root+"Labels/"
 label_list = []
-for dir in tqdm(os.listdir(data_root)):
-    print(dir)
+for dir in tqdm(os.listdir(image_root)):
+    print(f"Dir: {dir}")
     if dir not in label_list:
         label_list.append(dir)
-        label_txt.write('{} {}\n'.format(dir, str(len(label_list)-1)))
-        data_path = os.path.join(data_root, dir)
+        label2name_txt.write('{} {}\n'.format(dir, str(len(label_list)-1)))
+        data_path = os.path.join(image_root, dir)
         train_list = random.sample(os.listdir(data_path), 
                                    int(len(os.listdir(data_path))*train_ratio))
-        for im in train_list:
-            train_txt.write('{}/{} {}\n'.format(dir, im, str(len(label_list)-1)))
         for im in os.listdir(data_path):
-            if im in train_list:
+            xml_file = label_root+dir+'/'+im[:-3]+"xml"
+            try:
+                tree = ET.parse(xml_file)
+            except:
+                print(f"{xml_file} can't be opened!")
                 continue
+            root = tree.getroot()
+            objects = root.findall("object")
+            im_size = root.findall("size")[0]
+
+            if im in train_list:
+                train_image_ids_txt.write(f"{dir}/{im}\n")
+                train_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
+                train_class_labels_txt.write(f"{dir}/{im},{str(len(label_list)-1)}\n")
+                for obj in objects:
+                    pos = f"{obj[4][0].text},{obj[4][1].text},{obj[4][2].text},{obj[4][3].text}"
+                    train_localization_txt.write(f"{dir}/{im},{pos}\n")
             else:
-                val_txt.write('{}/{} {}\n'.format(dir, im, str(len(label_list)-1)))
+                test_image_ids_txt.write(f"{dir}/{im}\n")
+                test_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
+                test_class_labels_txt.write(f"{dir}/{im},{str(len(label_list)-1)}\n")
+                for obj in objects:
+                    pos = f"{obj[4][0].text},{obj[4][1].text},{obj[4][2].text},{obj[4][3].text}"
+                    test_localization_txt.write(f"{dir}/{im},{pos}\n")
 
-train_txt.close()
-val_txt.close()
-label_txt.close()
+train_image_ids_txt.close()
+train_class_labels_txt.close()
+train_image_sizes_txt.close()
+train_localization_txt.close()
 
+test_image_ids_txt.close()
+test_class_labels_txt.close()
+test_image_sizes_txt.close()
+test_localization_txt.close()
 
+label2name_txt.close()

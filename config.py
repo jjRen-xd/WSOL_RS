@@ -53,7 +53,7 @@ import warnings
 
 from util import Logger
 
-_DATASET_NAMES = ('CUB', 'ILSVRC', 'OpenImages')
+_DATASET_NAMES = ('CUB', 'ILSVRC', 'OpenImages', 'PN2', 'C45V2')
 _ARCHITECTURE_NAMES = ('vgg16', 'resnet50', 'inception_v3')
 _METHOD_NAMES = ('cam', 'adl', 'acol', 'spg', 'has', 'cutmix', 'gradcampp')
 _SPLITS = ('train', 'val', 'test')
@@ -145,7 +145,7 @@ def configure_pretrained_path(args):
     pretrained_path = None
     return pretrained_path
 
-
+# TODO 每类验证集数量
 def check_dependency(args):
     if args.dataset_name == 'CUB':
         if args.num_val_sample_per_class >= 6:

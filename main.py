@@ -75,6 +75,8 @@ class Trainer(object):
         "CUB": 200,
         "ILSVRC": 1000,
         "OpenImages": 100,
+        "PN2": 11,
+        "C45V2": 16
     }
     _FEATURE_PARAM_LAYER_PATTERNS = {
         'vgg': ['features.'],
@@ -242,9 +244,12 @@ class Trainer(object):
             supervise_log = [0 for i in range(200)]  # 每类5个监督样本,200类
         elif self.args.dataset_name == 'OpenImages':
             supervise_log = [0 for i in range(100)]
-        else:
+        elif self.args.dataset_name == 'ILSVRC':
             supervise_log = [0 for i in range(1000)]
-
+        elif self.args.dataset_name == 'PN2':
+            supervise_log = [0 for i in range(11)]
+        elif self.args.dataset_name == 'C45V2':
+            supervise_log = [0 for i in range(16)]
         total_loss = 0.0
         num_correct = 0
         num_images = 0
@@ -256,8 +261,8 @@ class Trainer(object):
             if batch_idx % int(len(loader) / 10) == 0:
                 print(" iteration ({} / {})".format(batch_idx + 1, len(loader)))
 
-            # logits, loss_cl = self._wsol_training(images, targets)  # ([4, 200]), ([1])
-            # pred = logits.argmax(dim=1)                             # ([4])
+            logits, loss_cl = self._wsol_training(images, targets)  # ([4, 200]), ([1])
+            pred = logits.argmax(dim=1)                             # ([4])
             # print("Before:", loss_cl, pred)
             # 分阶段训练
             # if epoch >= (1*self.args.epochs):
@@ -285,32 +290,32 @@ class Trainer(object):
                     loss_am += loss_am_temp
 
                     ################## 加入少量监督样本，计算L_ext ########################
-                    # if supervise_log[int(t2n(label))] < 10:
-                    #     supervise_log[int(t2n(label))] += 1
-                    #     iou_computer = CAMComputer(
-                    #         model=self.model,
-                    #         architecture = self.args.architecture,
-                    #         loader=self.loaders[split],
-                    #         metadata_root=os.path.join(self.args.metadata_root, split),
-                    #         mask_root=self.args.mask_root,
-                    #         iou_threshold_list=self.args.iou_threshold_list,    # 30,50,70
-                    #         dataset_name=self.args.dataset_name,
-                    #         split=split,
-                    #         cam_curve_interval=self.args.cam_curve_interval,    # cam阈值0-1间选取的间距
-                    #         multi_contour_eval=self.args.multi_contour_eval,    # 多轮廓评估
-                    #         log_folder=self.args.log_folder,
-                    #     ).evaluator
-                    #     multiple_iou = iou_computer.accumulate(cam, image_id, is_return = True)
-                    #     ext_loss += 1 - np.max(multiple_iou)
+                    if supervise_log[int(t2n(label))] < 10:
+                        supervise_log[int(t2n(label))] += 1
+                        iou_computer = CAMComputer(
+                            model=self.model,
+                            architecture = self.args.architecture,
+                            loader=self.loaders[split],
+                            metadata_root=os.path.join(self.args.metadata_root, split),
+                            mask_root=self.args.mask_root,
+                            iou_threshold_list=self.args.iou_threshold_list,    # 30,50,70
+                            dataset_name=self.args.dataset_name,
+                            split=split,
+                            cam_curve_interval=self.args.cam_curve_interval,    # cam阈值0-1间选取的间距
+                            multi_contour_eval=self.args.multi_contour_eval,    # 多轮廓评估
+                            log_folder=self.args.log_folder,
+                        ).evaluator
+                        multiple_iou = iou_computer.accumulate(cam, image_id, is_return = True)
+                        ext_loss += 1 - np.max(multiple_iou)
 
                 # Eq 6
-                alpha = 1
+                alpha = 2
                 omega = 10
                 loss_am /= images.size(0)
-                # ext_loss /= images.size(0)
+                ext_loss /= images.size(0)
                 self_loss = loss_cl + alpha*loss_am
-                # loss_sum = self_loss + omega*ext_loss
-                loss_sum = self_loss
+                loss_sum = self_loss + omega*ext_loss
+                # loss_sum = self_loss
 
             else:
                 loss_sum = loss_cl
@@ -405,7 +410,7 @@ class Trainer(object):
 
         self.performance_meters[split]['localization'].update(loc_score)
 
-        if self.args.dataset_name in ('CUB', 'ILSVRC'):
+        if self.args.dataset_name in ('CUB', 'ILSVRC', 'PN2', 'C45V2'):
             for idx, IOU_THRESHOLD in enumerate(self.args.iou_threshold_list):
                 self.performance_meters[split][
                     'localization_IOU_{}'.format(IOU_THRESHOLD)].update(
@@ -472,14 +477,14 @@ class Trainer(object):
 def main():
     trainer = Trainer()
     
-     # 训练前初始化性能评估
+    # 训练前初始化性能评估
     print("===========================================================")
-    # print("Start epoch 0 ...")
-    # trainer.evaluate(epoch=0, split='val')
-    # trainer.print_performances()
-    # trainer.report(epoch=0, split='val')
-    # trainer.save_checkpoint(epoch=0, split='val')
-    # print("Epoch 0 done.")
+    print("Start epoch 0 ...")
+    trainer.evaluate(epoch=0, split='val')
+    trainer.print_performances()
+    trainer.report(epoch=0, split='val')
+    trainer.save_checkpoint(epoch=0, split='val')
+    print("Epoch 0 done.")
     
     # 训练
     for epoch in range(trainer.args.epochs):
@@ -489,7 +494,7 @@ def main():
         # train_performance = trainer.train(split='train')
         train_performance = trainer.train_guide(epoch, split='train')
         trainer.report_train(train_performance, epoch + 1, split='train')
-        # trainer.evaluate(epoch + 1, split='val')
+        trainer.evaluate(epoch + 1, split='val')
         trainer.print_performances()
         trainer.report(epoch + 1, split='val')
         trainer.save_checkpoint(epoch + 1, split='val')

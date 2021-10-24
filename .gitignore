@@ -1,6 +1,7 @@
-/dataset/PatternNetV2/Images/
-/dataset/PatternNetV2/Labels/
-/dataset/PatternNetV2/ferry_terminal/
+/dataset/PN2/Images/
+/dataset/PN2/Labels/
+/dataset/C45V2/Images/
+/dataset/C45V2/Labels/
 /test_data/
 /train_log/
 /.vscode/

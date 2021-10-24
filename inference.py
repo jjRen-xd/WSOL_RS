@@ -91,7 +91,9 @@ class CAMComputer(object):
 
         self.evaluator = {"OpenImages": MaskEvaluator,
                           "CUB": BoxEvaluator,
-                          "ILSVRC": BoxEvaluator
+                          "ILSVRC": BoxEvaluator,
+                          "PN2": BoxEvaluator,
+                          "C45V2": BoxEvaluator
                           }[dataset_name](metadata=metadata,
                                           dataset_name=dataset_name,
                                           split=split,

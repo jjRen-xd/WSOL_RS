@@ -438,7 +438,7 @@ def evaluate_wsol(scoremap_root, metadata_root, mask_root, dataset_name, split,
                   cam_curve_interval=.001):
     """
     Compute WSOL performances of predicted heatmaps against ground truth
-    boxes (CUB, ILSVRC) or masks (OpenImages). For boxes, we compute the
+    boxes (CUB, ILSVRC, PN2, C45V2) or masks (OpenImages). For boxes, we compute the
     gt-known box accuracy (IoU>=0.5) at the optimal heatmap threshold.
     For masks, we compute the area-under-curve of the pixel-wise precision-
     recall curve.
@@ -455,7 +455,7 @@ def evaluate_wsol(scoremap_root, metadata_root, mask_root, dataset_name, split,
             See check_scoremap_validity() in util.py for the exact requirements.
         metadata_root: string.
         mask_root: string.
-        dataset_name: string. Supports [CUB, ILSVRC, and OpenImages].
+        dataset_name: string. Supports [CUB, ILSVRC, OpenImages, PN2 and C45V2].
         split: string. Supports [train, val, test].
         multi_contour_eval:  considering the best match between the set of all
             estimated boxes and the set of all ground truth boxes.
@@ -465,7 +465,7 @@ def evaluate_wsol(scoremap_root, metadata_root, mask_root, dataset_name, split,
         cam_curve_interval: float. Default 0.001. At which threshold intervals
             will the heatmaps be evaluated?
     Returns:
-        performance: float. For CUB and ILSVRC, maxboxacc is returned.
+        performance: float. For CUB, ILSVRC, PN2 and C45V2, maxboxacc is returned.
             For OpenImages, area-under-curve of the precision-recall curve
             is returned.
     """
@@ -477,7 +477,9 @@ def evaluate_wsol(scoremap_root, metadata_root, mask_root, dataset_name, split,
 
     evaluator = {"OpenImages": MaskEvaluator,
                  "CUB": BoxEvaluator,
-                 "ILSVRC": BoxEvaluator
+                 "ILSVRC": BoxEvaluator,
+                 "PN2": BoxEvaluator,
+                 "C45V2": BoxEvaluator
                  }[dataset_name](metadata=metadata,
                                  dataset_name=dataset_name,
                                  split=split,
@@ -510,7 +512,7 @@ def main():
     parser.add_argument('--mask_root', type=str, default='dataset/',
                         help="Root folder of masks (OpenImages).")
     parser.add_argument('--dataset_name', type=str,
-                        help="One of [CUB, ImageNet, OpenImages].")
+                        help="One of [CUB, ImageNet, OpenImages, PN2, C45V2].")
     parser.add_argument('--split', type=str,
                         help="One of [val, test]. They correspond to "
                              "train-fullsup and test, respectively.")

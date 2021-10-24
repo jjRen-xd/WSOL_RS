@@ -11,8 +11,11 @@
 #                   数据格式, 即：图像路径 标签 bbox, 若同一图像出现多个目标，
 #                   生成多行bbox说明
 #                                   --> PatternNetV2 <--
-#                   -- 样本总数：11*800-16=8784(有的立交桥图像没有目标)
-#                   -- 训练集：5271(60%) 测试集：1755(20%) 验证集：1757(20%)
+#                   -- 样本总数：11*800-16=8784(部分overpass图像没有目标)
+#                   -- 训练集：5268(60%) 测试集：1754(20%) 验证集：1757(20%)
+#                                 --> NWPU-RESISC45V2 <--
+#                   -- 样本总数：16*700-4=11196(overpass,island部分没有目标)
+#                   -- 训练集：6709(60%) 测试集：2252(20%) 验证集：2235(20%)
 #                   — — — — — — — — — — — — — — — — — — — — — — — — — — — 
 # Module called:    <0> None
 # Function List:    <0> None
@@ -34,7 +37,7 @@ import random
 from tqdm import tqdm
 import xml.etree.ElementTree as ET
 
-DATASET_NAME = "PatternNetV2"
+DATASET_NAME = "C45V2"
 data_root = f"/media/hp3090/HDD-2T/renjunjie/WSOL_RS/dataset/{DATASET_NAME}/"
 
 # Dataset name list
@@ -77,34 +80,37 @@ for dir in tqdm(os.listdir(image_root)):
             try:
                 tree = ET.parse(xml_file)
             except:
-                print(f"{xml_file} can't be opened!")
+                print(f"{xml_file} is not exit!")
                 continue
             root = tree.getroot()
             objects = root.findall("object")
+            if len(objects)==0:
+                print(f"{xml_file} has no objects!")
+                continue
             im_size = root.findall("size")[0]
 
             if im in train_list:
                 if im in val_list:
-                    val_image_ids_txt.write(f"{dir}/{im}\n")
-                    val_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
-                    val_class_labels_txt.write(f"{dir}/{im},{str(len(label_list)-1)}\n")
+                    val_image_ids_txt.write(f"Images/{dir}/{im}\n")
+                    val_image_sizes_txt.write(f"Images/{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
+                    val_class_labels_txt.write(f"Images/{dir}/{im},{str(len(label_list)-1)}\n")
                     for obj in objects:
                         pos = f"{obj[4][0].text},{obj[4][1].text},{obj[4][2].text},{obj[4][3].text}"
-                        val_localization_txt.write(f"{dir}/{im},{pos}\n")
+                        val_localization_txt.write(f"Images/{dir}/{im},{pos}\n")
                 else:
-                    train_image_ids_txt.write(f"{dir}/{im}\n")
-                    train_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
-                    train_class_labels_txt.write(f"{dir}/{im},{str(len(label_list)-1)}\n")
+                    train_image_ids_txt.write(f"Images/{dir}/{im}\n")
+                    train_image_sizes_txt.write(f"Images/{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
+                    train_class_labels_txt.write(f"Images/{dir}/{im},{str(len(label_list)-1)}\n")
                     for obj in objects:
                         pos = f"{obj[4][0].text},{obj[4][1].text},{obj[4][2].text},{obj[4][3].text}"
-                        train_localization_txt.write(f"{dir}/{im},{pos}\n")
+                        train_localization_txt.write(f"Images/{dir}/{im},{pos}\n")
             else:
-                test_image_ids_txt.write(f"{dir}/{im}\n")
-                test_image_sizes_txt.write(f"{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
-                test_class_labels_txt.write(f"{dir}/{im},{str(len(label_list)-1)}\n")
+                test_image_ids_txt.write(f"Images/{dir}/{im}\n")
+                test_image_sizes_txt.write(f"Images/{dir}/{im},{im_size[0].text},{im_size[1].text}\n")
+                test_class_labels_txt.write(f"Images/{dir}/{im},{str(len(label_list)-1)}\n")
                 for obj in objects:
                     pos = f"{obj[4][0].text},{obj[4][1].text},{obj[4][2].text},{obj[4][3].text}"
-                    test_localization_txt.write(f"{dir}/{im},{pos}\n")
+                    test_localization_txt.write(f"Images/{dir}/{im},{pos}\n")
 
 train_image_ids_txt.close()
 train_class_labels_txt.close()

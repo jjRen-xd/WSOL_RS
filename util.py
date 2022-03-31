@@ -144,11 +144,15 @@ def visualize(image_tensor, cam = [], bounding_box = [], bounding_box_pre = []):
     Return:
         synthesized image (array): shape =>(H, W, 3)
     """
-    img = reverse_normalize(image_tensor.clone().detach().squeeze())
-
-    # 去除img冗余维度，通道转换，转numpy，维度调整
-    r, g, b = img.split(1)
-    img_array = torch.cat([b, g, r]).cpu().numpy().transpose(1, 2, 0)
+    if len(image_tensor.shape) == 2:    # 临时调试边界框阈值划分添加
+        img_array = image_tensor
+        img_array = cv2.applyColorMap(np.uint8(image_tensor*255), cv2.COLORMAP_JET) / 255
+    else:
+        img = reverse_normalize(image_tensor.clone().detach().squeeze())
+        # 去除img冗余维度，通道转换，转numpy，维度调整
+        r, g, b = img.split(1)
+        img_array = torch.cat([b, g, r]).cpu().numpy().transpose(1, 2, 0)
+        
 
     if len(cam):
         # 去除cam冗余维度，生成热图，注意opencv默认bgr, heatmap: (224, 224, 3)
@@ -159,7 +163,8 @@ def visualize(image_tensor, cam = [], bounding_box = [], bounding_box_pre = []):
         result = img_array.copy()
 
     if len(bounding_box):
-        cv2.rectangle(result, (bounding_box[0], bounding_box[1]), (bounding_box[2], bounding_box[3]), (0, 255, 0), 2)
+        for box in bounding_box:
+            cv2.rectangle(result, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
     if len(bounding_box_pre):
         for box in bounding_box_pre:
             cv2.rectangle(result, (box[0], box[1]), (box[2], box[3]), (0, 0, 255), 2)

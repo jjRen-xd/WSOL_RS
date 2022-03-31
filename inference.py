@@ -111,15 +111,23 @@ class CAMComputer(object):
             images = images.cuda()
             # 前向传播计算cam
             cams = t2n(self.model(images, targets, return_cam=True))    # (b, 14, 14)
-            for cam, image_id in zip(cams, image_ids):
+            for cam, image, image_id in zip(cams, images, image_ids):
                 cam_resized = cv2.resize(cam, image_size,
                                          interpolation=cv2.INTER_CUBIC)
                 cam_normalized = normalize_scoremap(cam_resized)
+                # if self.split in ('val', 'test'):
+                #     cam_path = ospj(self.log_folder, 'scoremaps', image_id)
+                #     if not os.path.exists(ospd(cam_path)):
+                #         os.makedirs(ospd(cam_path))
+                #     np.save(ospj(cam_path), cam_normalized)
+                boxes_pre, box_gt = self.evaluator.accumulate(cam_normalized, image_id, return_bb = True)
                 if self.split in ('val', 'test'):
-                    cam_path = ospj(self.log_folder, 'scoremaps', image_id)
-                    if not os.path.exists(ospd(cam_path)):
-                        os.makedirs(ospd(cam_path))
-                    np.save(ospj(cam_path), cam_normalized)
+                    # 保存评测结果图
+                    vis_apth = ospj(self.log_folder, 'Vis', image_id)
+                    if not os.path.exists(ospd(vis_apth)):
+                        os.makedirs(ospd(vis_apth))
+                    cam_with_bbox = visualize(image, cam_normalized, bounding_box = box_gt, bounding_box_pre = boxes_pre)
+                    cv2.imwrite(ospj(vis_apth), cam_with_bbox*255)
                 self.evaluator.accumulate(cam_normalized, image_id)
         return self.evaluator.compute()
 
@@ -169,7 +177,7 @@ class CAMComputer(object):
             numerator = gradients.pow(2)
             denominator = 2 * gradients.pow(2)
             ag = activations * gradients.pow(3)
-            denominator += ag.view(nc, -1).sum(-1, keepdim=True).view(nc, 1, 1)
+            denominator += ag.view(bz, nc, -1).sum(-1, keepdim=True).view(bz, nc, 1, 1)
             denominator = torch.where(
                 denominator != 0.0, denominator, torch.ones_like(denominator)
             )
@@ -185,53 +193,36 @@ class CAMComputer(object):
             for cam, image, image_id in zip(cams, images, image_ids):
                 cam = cv2.resize(cam, (h, w),               # 上采样，基于4x4像素邻域的3次插值法
                                         interpolation=cv2.INTER_CUBIC)
-                cam_normalized = normalize_scoremap(cam)    # (224, 224)
-            
+                cam_normalized = normalize_scoremap(cam)    # (224, 224)            
 
-            # for idx, (image, image_label, image_id, score) in enumerate(zip(images, targets, image_ids, pred_scores)):
-            #     # 反向传播计算并hook梯度
-            #     self.model.zero_grad()
-            #     score.backward(retain_graph=True)
-            #     activations = hook_values.activations[idx]  # ([2048, 14, 14])
-            #     gradients = hook_values.gradients[idx]      # ([2048, 14, 14])
-            #     # 计算gradcampp
-            #     nc, h, w = activations.shape                # (num_channel, height, width)  
-            #     # 计算alpha
-            #     numerator = gradients.pow(2)
-            #     denominator = 2 * gradients.pow(2)
-            #     ag = activations * gradients.pow(3)
-            #     denominator += ag.view(nc, -1).sum(-1, keepdim=True).view(nc, 1, 1)
-            #     denominator = torch.where(
-            #         denominator != 0.0, denominator, torch.ones_like(denominator)
-            #     ) 
-            #     alpha = numerator / (denominator + 1e-7)
-
-            #     relu_grad = F.relu(score.exp() * gradients)
-            #     weights = (alpha * relu_grad).view(nc, -1).sum(-1).view(nc, 1, 1)   # ([2048, 1, 1])
-            #     # shape => (H', W')
-            #     cam = (weights * activations).sum(0)
-            #     cam = t2n(F.relu(cam))                              # (14, 14)
-                # cam_resized = cv2.resize(cam, image_size,
-            #                              interpolation=cv2.INTER_CUBIC)
-            #     cam_normalized = normalize_scoremap(cam_resized)    # (224, 224)
-            
-
-                # boxes_pre, box_gt = self.evaluator.accumulate(cam_normalized, image_id, return_bb = True)
+                boxes_pre, box_gt = self.evaluator.accumulate(cam_normalized, image_id, return_bb = True)
                 # print(boxes_pre, box_gt)
-                # masked_image = mask_image(cam_normalized, 166= image).unsqueeze(dim=0).float()
-                # showImg("test", visualize(masked_image))
+                # masked_image = mask_image(cam_normalized, image).unsqueeze(dim=0).float()
+
+
+                # showImg("test", visualize(image, cam_normalized, bounding_box = box_gt[0], bounding_box_pre = boxes_pre))
+                # showImg("test", visualize(image, cam_normalized, bounding_box_pre = boxes_pre))
+                # showImg("test", visualize(image, bounding_box = box_gt[0]))
                 # showImg("test", visualize(image, cam = cam_normalized))
-                # showImg("test", visualize(image, cam_normalized, box_gt[0], boxes_pre))
+                # showImg("test", visualize(masked_image))
 
 
                 if self.split in ('val', 'test'):
-                    cam_path = ospj(self.log_folder, 'scoremaps', image_id)
-                    if not os.path.exists(ospd(cam_path)):
-                        os.makedirs(ospd(cam_path))
-                    np.save(ospj(cam_path), cam_normalized)
+                    # 保存评测结果图
+                    vis_apth = ospj(self.log_folder, 'Vis', image_id)
+                    if not os.path.exists(ospd(vis_apth)):
+                        os.makedirs(ospd(vis_apth))
+                    cam_nobox = visualize(image, cam_normalized)
+                    # cam_with_bbox = visualize(image, cam_normalized, bounding_box = box_gt, bounding_box_pre = boxes_pre)
+                    cv2.imwrite(ospj(vis_apth), cam_nobox*255)
+                    # 保存CAM数据
+                    # cam_path = ospj(self.log_folder, 'scoremaps', image_id)
+                    # if not os.path.exists(ospd(cam_path)):
+                    #     os.makedirs(ospd(cam_path))
+                    # np.save(ospj(cam_path), cam_normalized)
                 self.evaluator.accumulate(cam_normalized, image_id)
         return self.evaluator.compute()
-
+                      
 
 def compute_gradcampp(images, targets, model, architecture, top1 = False, gt_known = True):
     _, _, h, w = images.shape
@@ -275,7 +266,7 @@ def compute_gradcampp(images, targets, model, architecture, top1 = False, gt_kno
     numerator = gradients.pow(2)
     denominator = 2 * gradients.pow(2)
     ag = activations * gradients.pow(3)
-    denominator += ag.view(nc, -1).sum(-1, keepdim=True).view(nc, 1, 1)
+    denominator += ag.view(bz, nc, -1).sum(-1, keepdim=True).view(bz, nc, 1, 1)
     denominator = torch.where(
         denominator != 0.0, denominator, torch.ones_like(denominator)
     )

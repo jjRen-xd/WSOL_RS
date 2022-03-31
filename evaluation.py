@@ -34,7 +34,7 @@ from data_loaders import get_image_sizes
 from data_loaders import get_mask_paths
 from util import check_scoremap_validity
 from util import check_box_convention
-from util import t2n
+from util import t2n, showImg, visualize
 
 _IMAGENET_MEAN = [0.485, .456, .406]
 _IMAGENET_STDDEV = [.229, .224, .225]
@@ -164,7 +164,8 @@ def compute_bboxes_from_scoremaps(scoremap, scoremap_threshold_list,
         boxes, number_of_box = scoremap2bbox(threshold)
         estimated_boxes_at_each_thr.append(boxes)
         number_of_box_list.append(number_of_box)
-
+        # print(f"{threshold}: {boxes}, {number_of_box}")
+        # showImg("thr_vis", visualize(scoremap, bounding_box_pre = boxes))
     return estimated_boxes_at_each_thr, number_of_box_list
 
 
@@ -248,29 +249,34 @@ class BoxEvaluator(LocalizationEvaluator):
             image_id: string.
         """
         # 尝试1000个阈值，每个阈值框的数目不等
-        boxes_at_thresholds, number_of_box_list = compute_bboxes_from_scoremaps(    
+        boxes_at_thresholds, number_of_box_list = compute_bboxes_from_scoremaps(   # (1000,)(1000,) 
             scoremap=scoremap,
             scoremap_threshold_list=self.cam_threshold_list,
             multi_contour_eval=self.multi_contour_eval
         )
+        boxes_at_thresholds_not_cat = boxes_at_thresholds
         boxes_at_thresholds = np.concatenate(boxes_at_thresholds, axis=0)   # (1903, 4)不定
-        multiple_iou = calculate_multiple_iou(                              # (1903, 1)
+        multiple_iou = calculate_multiple_iou(                              # (len(pre), len(gt)) (1903, 1)
             np.array(boxes_at_thresholds),
-            np.array(self.gt_bboxes[image_id]))
+            np.array(self.gt_bboxes[image_id])
+        )
         idx = 0
+        # thr = 0
         sliced_multiple_iou = []            # 1000
         for nr_box in number_of_box_list:
             sliced_multiple_iou.append(
                 max(multiple_iou.max(1)[idx:idx + nr_box])
             )
+            # print(thr, nr_box, max(multiple_iou.max(1)[idx:idx + nr_box]))
             idx += nr_box
+            # thr += 0.001
         if is_return:
             return sliced_multiple_iou  # list,1000阈值下的IOU
         if return_bb:
             bb_label = np.argmax(sliced_multiple_iou)
-            predict_bb = boxes_at_thresholds[bb_label: bb_label+number_of_box_list[bb_label]]
+            predict_bb = boxes_at_thresholds_not_cat[bb_label]  # 原来返回的bounding box都不对
             return predict_bb, self.gt_bboxes[image_id]
-        for _THRESHOLD in self.iou_threshold_list:
+        for _THRESHOLD in self.iou_threshold_list:  # 30，50，70
             correct_threshold_indices = \
                 np.where(np.asarray(sliced_multiple_iou) >= (_THRESHOLD/100))[0]
             self.num_correct[_THRESHOLD][correct_threshold_indices] += 1

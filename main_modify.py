@@ -266,11 +266,11 @@ class Trainer(object):
                 print(" iteration ({} / {})".format(batch_idx + 1, len(loader)))
 
             logits, loss_cl = self._wsol_training(images, targets)  # ([4, 200]), ([1])
-            pred = logits.argmax(dim=1)                             # ([4])
+            preds = logits.argmax(dim=1)                             # ([4])
             # print("Before:", loss_cl, pred)
             # 分阶段训练
-            # if epoch >= (1*self.args.epochs):
-            if 1:
+            # if epoch >= (0.5*self.args.epochs):
+            if 0:
                 # print("train self loss")
                 ################### 计算gradcampp，并获取抹去目标损失L_am->Loss_self ######################
                 loss_am = 0
@@ -294,32 +294,32 @@ class Trainer(object):
                     loss_am += loss_am_temp
 
                     ################## 加入少量监督样本，计算L_ext ########################
-                    if supervise_log[int(t2n(label))] < 10:
-                        supervise_log[int(t2n(label))] += 1
-                        iou_computer = CAMComputer(
-                            model=self.model,
-                            architecture = self.args.architecture,
-                            loader=self.loaders[split],
-                            metadata_root=os.path.join(self.args.metadata_root, split),
-                            mask_root=self.args.mask_root,
-                            iou_threshold_list=self.args.iou_threshold_list,    # 30,50,70
-                            dataset_name=self.args.dataset_name,
-                            split=split,
-                            cam_curve_interval=self.args.cam_curve_interval,    # cam阈值0-1间选取的间距
-                            multi_contour_eval=self.args.multi_contour_eval,    # 多轮廓评估
-                            log_folder=self.args.log_folder,
-                        ).evaluator
-                        multiple_iou = iou_computer.accumulate(cam, image_id, is_return = True)
-                        ext_loss += 1 - np.max(multiple_iou)
+                    # if supervise_log[int(t2n(label))] < 10:
+                    #     supervise_log[int(t2n(label))] += 1
+                    #     iou_computer = CAMComputer(
+                    #         model=self.model,
+                    #         architecture = self.args.architecture,
+                    #         loader=self.loaders[split],
+                    #         metadata_root=os.path.join(self.args.metadata_root, split),
+                    #         mask_root=self.args.mask_root,
+                    #         iou_threshold_list=self.args.iou_threshold_list,    # 30,50,70
+                    #         dataset_name=self.args.dataset_name,
+                    #         split=split,
+                    #         cam_curve_interval=self.args.cam_curve_interval,    # cam阈值0-1间选取的间距
+                    #         multi_contour_eval=self.args.multi_contour_eval,    # 多轮廓评估
+                    #         log_folder=self.args.log_folder,
+                    #     ).evaluator
+                    #     multiple_iou = iou_computer.accumulate(cam, image_id, is_return = True)
+                    #     ext_loss += 1 - np.max(multiple_iou)
 
                 # Eq 6
-                alpha = 10
-                omega = 40
+                alpha = 5
+                omega = 20
                 loss_am /= images.size(0)
                 ext_loss /= images.size(0)
                 self_loss = loss_cl + alpha*loss_am
-                loss_sum = self_loss + omega*ext_loss
-                # loss_sum = self_loss
+                # loss_sum = self_loss + omega*ext_loss
+                loss_sum = self_loss
 
             else:
                 loss_sum = loss_cl
@@ -481,28 +481,28 @@ class Trainer(object):
 def main():
     trainer = Trainer()
     
-    # 训练前初始化性能评估
-    print("===========================================================")
-    print("Start epoch 0 ...")
-    trainer.evaluate(epoch=0, split='val')
-    trainer.print_performances()
-    trainer.report(epoch=0, split='val')
-    trainer.save_checkpoint(epoch=0, split='val')
-    print("Epoch 0 done.")
+    # # 训练前初始化性能评估
+    # print("===========================================================")
+    # print("Start epoch 0 ...")
+    # trainer.evaluate(epoch=0, split='val')
+    # trainer.print_performances()
+    # trainer.report(epoch=0, split='val')
+    # trainer.save_checkpoint(epoch=0, split='val')
+    # print("Epoch 0 done.")
     
-    # 训练
-    for epoch in range(trainer.args.epochs):
-        print("===========================================================")
-        print("Start epoch {} ...".format(epoch + 1))
-        trainer.adjust_learning_rate(epoch + 1)
-        train_performance = trainer.train(split='train')
-        # train_performance = trainer.train_guide(epoch, split='train')
-        trainer.report_train(train_performance, epoch + 1, split='train')
-        trainer.evaluate(epoch + 1, split='val')
-        trainer.print_performances()
-        trainer.report(epoch + 1, split='val')
-        trainer.save_checkpoint(epoch + 1, split='val')
-        print("Epoch {} done.".format(epoch + 1))
+    # # 训练
+    # for epoch in range(trainer.args.epochs):
+    #     print("===========================================================")
+    #     print("Start epoch {} ...".format(epoch + 1))
+    #     trainer.adjust_learning_rate(epoch + 1)
+    #     # train_performance = trainer.train(split='train')
+    #     train_performance = trainer.train_guide(epoch, split='train')
+    #     trainer.report_train(train_performance, epoch + 1, split='train')
+    #     trainer.evaluate(epoch + 1, split='val')
+    #     trainer.print_performances()
+    #     trainer.report(epoch + 1, split='val')
+    #     trainer.save_checkpoint(epoch + 1, split='val')
+    #     print("Epoch {} done.".format(epoch + 1))
     
     # 测试
     print("===========================================================")

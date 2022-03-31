@@ -6,3 +6,5 @@
 /train_log/
 /.vscode/
 /vis_result/
+dataset/data_pn2_c45v2.zip
+dataset/metadata.zip

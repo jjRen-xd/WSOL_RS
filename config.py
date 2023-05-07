@@ -118,13 +118,13 @@ def configure_scoremap_output_paths(args):
 def configure_log_folder(args):
     log_folder = ospj('train_log', args.experiment_name)
      
-    # if os.path.isdir(log_folder):
-    #     if args.override_cache:
-    #         shutil.rmtree(log_folder, ignore_errors=True)
-    #     else:
-    #         raise RuntimeError("Experiment with the same name exists: {}"
-    #                            .format(log_folder))
-    # os.makedirs(log_folder)
+    if os.path.isdir(log_folder):
+        if args.override_cache:
+            shutil.rmtree(log_folder, ignore_errors=True)
+        else:
+            raise RuntimeError("Experiment with the same name exists: {}"
+                               .format(log_folder))
+    os.makedirs(log_folder)
     return log_folder
 
 
@@ -146,7 +146,7 @@ def configure_pretrained_path(args):
     pretrained_path = None
     return pretrained_path
 
-# TODO 每类验证集数量
+# TODO 每类验证集数量, 无所谓约束与否
 def check_dependency(args):
     if args.dataset_name == 'CUB':
         if args.num_val_sample_per_class >= 6:
@@ -263,7 +263,7 @@ def get_configs():
 
     args = parser.parse_args()
 
-    check_dependency(args)
+    check_dependency(args)                          # 检查数据集数量
     args.log_folder = configure_log_folder(args)
     configure_log(args)
     box_v2_metric(args)

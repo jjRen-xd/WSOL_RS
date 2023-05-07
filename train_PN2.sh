@@ -53,13 +53,6 @@ CUDA_VISIBLE_DEVICES=0 python main_modify.py --dataset_name PN2 \
                --eval_checkpoint_type last
 
 
-
-
-
-
-
-
-
 ################################# CAM ##################################
 # CUDA_VISIBLE_DEVICES=1 python main.py --dataset_name PN2 \
 #                --architecture resnet50 \

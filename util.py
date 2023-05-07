@@ -44,14 +44,14 @@ class Logger(object):
 
 
 def t2n(t):
-    return t.detach().cpu().numpy().astype(np.float)
+    return t.detach().cpu().numpy().astype(np.float64)
 
 
 def check_scoremap_validity(scoremap):
     if not isinstance(scoremap, np.ndarray):
         raise TypeError("Scoremap must be a numpy array; it is {}."
                         .format(type(scoremap)))
-    if scoremap.dtype != np.float:
+    if scoremap.dtype != np.float64:
         raise TypeError("Scoremap must be of np.float type; it is of {} type."
                         .format(scoremap.dtype))
     if len(scoremap.shape) != 2:
